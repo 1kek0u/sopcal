@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pdb
 import sys
-
 class Ellipsoid:
     def __init__(self,*,model:str='wgs84',a:float=0 , f:float=0 ):
         if model =='wgs84':
@@ -54,7 +53,7 @@ def latlonalt2enu(lat,lon,h,lat0,lon0,h0,*,ell=Ellipsoid()):
     e,n,u = ecef2enu(x,y,z,lat0,lon0,h0,ell=Ell)
     return e,n,u
 
-def do_sort(fname):
+def do_sort(fname,out_file):
     data = pd.read_table(fname,names=["cname","lon","lat"],encoding="shift-jis")
     cable_names=pd.unique(data["cname"])
     for j in range(len(cable_names)):
@@ -107,16 +106,50 @@ def do_sort(fname):
             D2 = D2 + cn.d  
     
         if (D2 <= D1):
-            print(cable.loc[cnum_stck2,['cname','lat','lon']].to_csv(sep=',',header=None,index=None),end='')
+            cable.loc[cnum_stck2,['cname','lat','lon']].to_csv(out_file,sep=',',header=None,index=False)
         else:
-            print(cable.loc[cnum_stck1,['cname','lat','lon']].to_csv(sep=',',header=None,index=None),end='')
+            cable.loc[cnum_stck1,['cname','lat','lon']].to_csv(out_file,sep=',',header=None,index=False)
     return     
 
 argv = sys.argv
+help_msg =("Usage: sopcal.py [-h][-o] filename \nSorting the points took from cable database into order that cables are laid.\nOptions:\n-h            Display help information.\n-o <file>     Place the output into <file>.Default is <standard output>\n")
+out_file = sys.stdout
 if(len(argv)==1):
-    print("Usage: cablesort filename \ncablesort: error: the following arguments are required: filename",file=sys.stderr)
-
+    print("sopcal: error: the following arguments are required: filename\n\n"+help_msg,file=sys.stderr)
 if(len(argv)>1):
-    for k in range(1,len(argv)): 
-        do_sort(argv[k])
-exit(0)
+    nopt = int(0)
+    i=1
+    while( i < len(argv)):
+        c = argv[i] 
+        if(c[0]=='-'):
+            if(len(c) == 1):
+                print("sopcal; invalid option : -\n\n"+help_msg,file=sys.stderr)
+                exit(0)
+            elif(c[1] == 'h'):
+                print(help_msg)
+                exit(0)
+            elif(c[1] =='o'):
+                if(len(c) > 2):
+                    out_file = c[2:]
+                else :
+                    i = i+1
+                    out_file = argv[i]
+            elif(c[1] == 'd'):
+                if(len(c) > 2):
+                    delimiter = c[2:]
+                else :
+                    i=i+1
+                    delimiter = argv[i] 
+            else:
+                print("sopcal; invalid option:-"+c[1]+"\n\n"+help_msg,file=sys.stderr)
+                exit(1)
+        else:
+            nopt = np.hstack((nopt,i))
+        i = i+1
+    if(type(nopt) != int):
+        for k in range(1,len(nopt)):
+            do_sort(argv[nopt[k]],sys.stdout)
+        exit(0)
+    else:
+        print("sopcal: error: the following arguments are required: filename\n\n"+help_msg,file=sys.stderr)
+        exit(1)
